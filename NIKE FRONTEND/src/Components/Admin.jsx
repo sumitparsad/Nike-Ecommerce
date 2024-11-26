@@ -33,6 +33,8 @@ function Admin() {
     kid: false,
   }); // State for new category
   const [editTrigger, setEditTrigger] = useState(false); // State to trigger useEffect
+  const [transactions, setTransactions] = useState([]); // Add state for transactions
+  const [expandedTransaction, setExpandedTransaction] = useState(null); // Add state for expanded transaction
 
   const handleEditProduct = (product) => {
     setEditProduct({
@@ -229,6 +231,23 @@ function Admin() {
       });
   }, []);
 
+  // Fetch transactions from the backend
+  useEffect(() => {
+    const token = localStorage.getItem("token"); // Get the token from local storage
+    axios
+      .get("http://localhost:5001/admin/transactions", {
+        headers: {
+          Authorization: `Bearer ${token}`, // Include the token in the request headers
+        },
+      })
+      .then((response) => {
+        setTransactions(response.data);
+      })
+      .catch((error) => {
+        console.error("There was an error fetching the transactions!", error);
+      });
+  }, []);
+
   // Handle adding a new category
   const handleAddCategory = (e) => {
     e.preventDefault();
@@ -257,6 +276,11 @@ function Admin() {
   const handleCopyCategoryId = (id) => {
     navigator.clipboard.writeText(id);
     alert("Category ID copied to clipboard!");
+  };
+
+  // Function to toggle transaction details
+  const toggleTransactionDetails = (transactionId) => {
+    setExpandedTransaction(expandedTransaction === transactionId ? null : transactionId);
   };
 
   const orders = [
@@ -632,23 +656,53 @@ function Admin() {
                   <th className="px-4 py-2">Order ID</th>
                   <th className="px-4 py-2">Customer</th>
                   <th className="px-4 py-2">Total Price</th>
-                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Date</th>
                   <th className="px-4 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="border-t">
-                    <td className="px-4 py-2">{order.id}</td>
-                    <td className="px-4 py-2">{order.customer}</td>
-                    <td className="px-4 py-2">{order.total}</td>
-                    <td className="px-4 py-2">{order.status}</td>
-                    <td className="px-4 py-2">
-                      <button className="px-2 py-1 bg-blue-500 text-white rounded">
-                        Update Status
-                      </button>
-                    </td>
-                  </tr>
+                {transactions.map((transaction) => (
+                  <React.Fragment key={transaction._id}>
+                    <tr className="border-t">
+                      <td className="px-4 py-2">{transaction._id}</td>
+                      <td className="px-4 py-2">{transaction.userId.name}</td>
+                      <td className="px-4 py-2">{`$${transaction.totalPrice}`}</td>
+                      <td className="px-4 py-2">{new Date(transaction.date).toLocaleDateString()}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          className="px-2 py-1 bg-blue-500 text-white rounded"
+                          onClick={() => toggleTransactionDetails(transaction._id)}
+                        >
+                          {expandedTransaction === transaction._id ? "Hide Details" : "View Details"}
+                        </button>
+                      </td>
+                    </tr>
+                    {expandedTransaction === transaction._id && (
+                      <tr>
+                        <td colSpan="5" className="px-4 py-2">
+                          <div className="bg-gray-100 p-4 rounded-lg">
+                            <h3 className="text-xl font-semibold mb-2">Products</h3>
+                            <ul>
+                              {transaction.products.map((product) => (
+                                <li key={product.productId._id} className="mb-2 flex items-center">
+                                  <img
+                                    src={`http://localhost:5001/${product.productId.image}`}
+                                    alt={product.productId.name}
+                                    className="w-16 h-16 object-contain rounded mr-4"
+                                  />
+                                  <div>
+                                    <p className="font-semibold">{product.productId.name}</p>
+                                    <p>Quantity: {product.quantity}</p>
+                                    <p>Price: ${product.price}</p>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

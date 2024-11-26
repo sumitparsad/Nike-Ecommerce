@@ -9,6 +9,7 @@ import CartIcon from "../assets/Nav_Cart.png";
 function Navbar() {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false); // State to track login status
+  const [searchText, setSearchText] = useState(""); // State to track search text
   const navigate = useNavigate();
 
   const fetchCartItemCount = async () => {
@@ -38,6 +39,28 @@ function Navbar() {
     localStorage.removeItem("userId");
     setIsLoggedIn(false);
     navigate("/login");
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    try {
+      console.log("Search text:", searchText); // Log the search text
+      if (searchText.trim() === "") {
+        const response = await axios.get(`http://localhost:5001/products`);
+        navigate("/all-products", { state: { products: response.data.products } });
+      } else {
+        const response = await axios.post(`http://localhost:5001/products/search`, {
+          query: searchText,
+        });
+        navigate("/all-products", { state: { products: response.data.products } });
+      }
+    } catch (error) {
+      console.error("Error searching products:", error.response?.data || error.message);
+    }
+  };
+
+  const handleSearchClick = () => {
+    navigate("/all-products");
   };
 
   useEffect(() => {
@@ -88,7 +111,7 @@ function Navbar() {
 
       <div className="flex h-full items-center p-8 gap-8">
         {/* Inline Search Bar with SearchIcon image */}
-        <div className="flex items-center bg-gray-100 rounded-full px-4 py-2 w-[220px]">
+        <form onSubmit={handleSearch} className="flex items-center bg-gray-100 rounded-full px-4 py-2 w-[220px]">
           <img
             src={SearchIcon}
             alt="Search Icon"
@@ -97,9 +120,12 @@ function Navbar() {
           <input
             type="text"
             placeholder="Search"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onClick={handleSearchClick} // Navigate to all products page when clicked
             className="bg-transparent outline-none text-gray-700 w-full ml-1 text-[16px] "
           />
-        </div>
+        </form>
 
         <img
           src={FavoriteIcon}

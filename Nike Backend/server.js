@@ -501,6 +501,20 @@ app.get("/transaction/history", verifyToken, async (req, res) => {
   }
 });
 
+// Route to get all transactions for admin
+app.get("/admin/transactions", async (req, res) => {
+  try {
+    const transactions = await Transaction.find().populate("userId products.productId");
+    res.status(200).json(transactions);
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+    res.status(500).json({
+      message: "Failed to fetch transactions.",
+      error: error.message,
+    });
+  }
+});
+
 app.get("/someRoute", (req, res) => {
   console.log(req); // This should log the cookies object
   res.send("Cookies logged");
@@ -516,6 +530,27 @@ app.post("/admin/create/category", async (req, res) => {
     console.error("Error adding category:", error);
     res.status(500).json({
       message: "Server Error",
+      error: error.message,
+    });
+  }
+});
+
+// Route to search products by name
+app.post("/products/search", async (req, res) => {
+  const { query } = req.body; // Ensure the query parameter is correctly extracted from the body
+  
+  try {
+    console.log("Search query:", query); // Log the search query
+    if (!query) {
+      return res.status(400).json({ message: "Query parameter is missing" });
+    }
+    const products = await Product.find({ name: { $regex: new RegExp(query, "i") } });
+    console.log("Products found:", products); // Log the products
+    res.status(200).json({ products });
+  } catch (error) {
+    console.error("Error searching products:", error);
+    res.status(500).json({
+      message: "Failed to search products.",
       error: error.message,
     });
   }

@@ -1,22 +1,27 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import axios from "axios";
 
 const AllProducts = () => {
   const [products, setProducts] = useState([]);
   const [likedProducts, setLikedProducts] = useState([]);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    axios
-      .get("http://localhost:5001/products")
-      .then((response) => {
-        setProducts(response.data.products || []);
-      })
-      .catch((error) => {
-        console.error("Error fetching products:", error);
-      });
-  }, []);
+    if (location.state && location.state.products) {
+      setProducts(location.state.products);
+    } else {
+      axios
+        .get("http://localhost:5001/products")
+        .then((response) => {
+          setProducts(response.data.products || []);
+        })
+        .catch((error) => {
+          console.error("Error fetching products:", error);
+        });
+    }
+  }, [location.state]);
 
   const handleProductClick = (productId) => {
     const product = products.find((item) => item._id === productId);
@@ -105,7 +110,7 @@ const AllProducts = () => {
             </div>
           ))
         ) : (
-          <p>Loading products...</p>
+          <p>No products found</p>
         )}
       </div>
     </div>

@@ -55,7 +55,9 @@ const Cart = () => {
       1,
       updatedProducts[index].quantity + change
     );
-    setCart({ ...cart, products: updatedProducts });
+    updatedProducts[index].price = updatedProducts[index].productId.price * updatedProducts[index].quantity; // Update the price based on quantity
+    const newTotalPrice = updatedProducts.reduce((acc, product) => acc + product.price, 0); // Recalculate total price
+    setCart({ ...cart, products: updatedProducts, totalPrice: newTotalPrice }); // Update cart with new total price
   };
 
   const handleApplyCoupon = () => {
