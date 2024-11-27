@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom"; // Add useNavigate import
+
 import { FaEdit, FaTrash, FaPlus, FaCopy } from "react-icons/fa";
 import shoe1 from "../assets/NewArrival_shoe1.png";
 import axios from "axios"; // Add axios import
@@ -36,6 +38,8 @@ function Admin() {
   const [transactions, setTransactions] = useState([]); // Add state for transactions
   const [expandedTransaction, setExpandedTransaction] = useState(null); // Add state for expanded transaction
 
+  const navigate = useNavigate(); // Initialize useNavigate
+
   const handleEditProduct = (product) => {
     setEditProduct({
       ...product,
@@ -51,7 +55,7 @@ function Admin() {
     });
 
     for (let pair of formData.entries()) {
-      console.log(pair[0] + ': ' + pair[1]); // Log the form data entries
+      console.log(pair[0] + ": " + pair[1]); // Log the form data entries
     }
 
     axios
@@ -130,6 +134,29 @@ function Admin() {
       });
   };
 
+  const handleDeleteProduct = async (productID) => {
+    try {
+      const response = await axios.delete(
+        `http://localhost:5001/admin/delete/product/${productID}`
+      );
+      if (response.status === 200) {
+        // alert("Product deleted successfully!");
+        setProducts((prevProducts) =>
+          prevProducts.filter((product) => product._id !== productID)
+        );
+
+        // Optionally, refresh the product list here
+      } else {
+        alert("Failed to delete the product. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error deleting the product:", error);
+      alert(
+        "An error occurred while deleting the product. Please check the console for details."
+      );
+    }
+  };
+
   //handle product input change
   const handleProductInputChange = (e) => {
     const { name, value } = e.target;
@@ -154,6 +181,7 @@ function Admin() {
   }, []);
   // Remove user function
   const handleRemoveUser = (userId) => {
+    console.log(userId + "efds");
     axios
       .delete(`http://localhost:5001/users/delete/${userId}`)
       .then((response) => {
@@ -191,13 +219,15 @@ function Admin() {
       .get("http://localhost:5001/products") // Updated API endpoint
       .then((response) => {
         console.log(response.data); // Log the response to check the data
-        const productsWithCategoryNames = response.data.products.map((product) => {
-          return {
-            ...product,
-            categoryName: product.categoryId.name, // Use the category name directly
-            categoryId: product.categoryId._id, // Use the category ID
-          };
-        });
+        const productsWithCategoryNames = response.data.products.map(
+          (product) => {
+            return {
+              ...product,
+              categoryName: product.categoryId.name, // Use the category name directly
+              categoryId: product.categoryId._id, // Use the category ID
+            };
+          }
+        );
         setProducts(productsWithCategoryNames);
       })
       .catch((error) => {
@@ -280,7 +310,9 @@ function Admin() {
 
   // Function to toggle transaction details
   const toggleTransactionDetails = (transactionId) => {
-    setExpandedTransaction(expandedTransaction === transactionId ? null : transactionId);
+    setExpandedTransaction(
+      expandedTransaction === transactionId ? null : transactionId
+    );
   };
 
   const orders = [
@@ -299,10 +331,25 @@ function Admin() {
     const { name, value } = e.target;
     setNewAdmin({ ...newAdmin, [name]: value });
   };
+  const [isLoggedIn, setIsLoggedIn] = React.useState(true);
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userId");
+    setIsLoggedIn(false);
+    navigate("/login"); // Navigate to login page after logout
+  };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen px-24">
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <button
+          onClick={handleLogout}
+          className="text-white bg-red-500 hover:bg-red-600 px-4 py-2 rounded"
+        >
+          Logout
+        </button>
+      </div>
 
       {/* Tabs for different management sections */}
       <nav className="mb-6">
@@ -614,7 +661,8 @@ function Admin() {
                         />
                       </td>
                       <td className="px-4 py-2">{product.name}</td>
-                      <td className="px-4 py-2">{product.categoryName}</td> {/* Display category name */}
+                      <td className="px-4 py-2">{product.categoryName}</td>{" "}
+                      {/* Display category name */}
                       <td className="px-4 py-2">{`$${product.price}`}</td>
                       <td className="px-4 py-2 flex gap-2">
                         <button
@@ -624,7 +672,7 @@ function Admin() {
                           <FaEdit className="mr-1" /> Edit
                         </button>
                         <button
-                          onClick={() => handleRemoveProduct(product._id)}
+                          onClick={() => handleDeleteProduct(product._id)}
                           className="px-2 py-1 bg-red-500 text-white rounded flex items-center"
                         >
                           <FaTrash className="mr-1" /> Delete
@@ -646,6 +694,7 @@ function Admin() {
       )}
 
       {/* Order Management */}
+      {/* Order Management */}
       {activeTab === "orders" && (
         <div>
           <h2 className="text-2xl font-semibold mb-4">Order Management</h2>
@@ -665,15 +714,23 @@ function Admin() {
                   <React.Fragment key={transaction._id}>
                     <tr className="border-t">
                       <td className="px-4 py-2">{transaction._id}</td>
-                      <td className="px-4 py-2">{transaction.userId.name}</td>
+                      <td className="px-4 py-2">
+                        {transaction.userId ? transaction.userId.name : "Guest"}
+                      </td>
                       <td className="px-4 py-2">{`$${transaction.totalPrice}`}</td>
-                      <td className="px-4 py-2">{new Date(transaction.date).toLocaleDateString()}</td>
+                      <td className="px-4 py-2">
+                        {new Date(transaction.date).toLocaleDateString()}
+                      </td>
                       <td className="px-4 py-2">
                         <button
                           className="px-2 py-1 bg-blue-500 text-white rounded"
-                          onClick={() => toggleTransactionDetails(transaction._id)}
+                          onClick={() =>
+                            toggleTransactionDetails(transaction._id)
+                          }
                         >
-                          {expandedTransaction === transaction._id ? "Hide Details" : "View Details"}
+                          {expandedTransaction === transaction._id
+                            ? "Hide Details"
+                            : "View Details"}
                         </button>
                       </td>
                     </tr>
@@ -681,17 +738,24 @@ function Admin() {
                       <tr>
                         <td colSpan="5" className="px-4 py-2">
                           <div className="bg-gray-100 p-4 rounded-lg">
-                            <h3 className="text-xl font-semibold mb-2">Products</h3>
+                            <h3 className="text-xl font-semibold mb-2">
+                              Products
+                            </h3>
                             <ul>
                               {transaction.products.map((product) => (
-                                <li key={product.productId._id} className="mb-2 flex items-center">
+                                <li
+                                  key={product._id}
+                                  className="mb-2 flex items-center"
+                                >
                                   <img
                                     src={`http://localhost:5001/${product.productId.image}`}
                                     alt={product.productId.name}
                                     className="w-16 h-16 object-contain rounded mr-4"
                                   />
                                   <div>
-                                    <p className="font-semibold">{product.productId.name}</p>
+                                    <p className="font-semibold">
+                                      {product.productId.name}
+                                    </p>
                                     <p>Quantity: {product.quantity}</p>
                                     <p>Price: ${product.price}</p>
                                   </div>
@@ -834,36 +898,39 @@ function Admin() {
                 required
               />
             </div>
-            <div className="mb-4">
-              <label className="block font-semibold mb-2">Men</label>
-              <input
-                type="checkbox"
-                name="men"
-                checked={newCategory.men}
-                onChange={handleCategoryInputChange}
-                className="mr-2"
-              />
+            <div className="flex  gap-5">
+              <div className="mb-4 ">
+                <label className="block font-semibold mb-2">Men</label>
+                <input
+                  type="checkbox"
+                  name="men"
+                  checked={newCategory.men}
+                  onChange={handleCategoryInputChange}
+                  className="mr-2  "
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block font-semibold mb-2">Women</label>
+                <input
+                  type="checkbox"
+                  name="women"
+                  checked={newCategory.women}
+                  onChange={handleCategoryInputChange}
+                  className="mr-2"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block font-semibold mb-2">Kid</label>
+                <input
+                  type="checkbox"
+                  name="kid"
+                  checked={newCategory.kid}
+                  onChange={handleCategoryInputChange}
+                  className="mr-2"
+                />
+              </div>
             </div>
-            <div className="mb-4">
-              <label className="block font-semibold mb-2">Women</label>
-              <input
-                type="checkbox"
-                name="women"
-                checked={newCategory.women}
-                onChange={handleCategoryInputChange}
-                className="mr-2"
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block font-semibold mb-2">Kid</label>
-              <input
-                type="checkbox"
-                name="kid"
-                checked={newCategory.kid}
-                onChange={handleCategoryInputChange}
-                className="mr-2"
-              />
-            </div>
+
             <button
               type="submit"
               className="px-6 py-2 bg-green-600 text-white rounded"
@@ -890,9 +957,15 @@ function Admin() {
                     <tr key={category._id} className="border-t">
                       <td className="px-4 py-2">{category._id}</td>
                       <td className="px-4 py-2">{category.name}</td>
-                      <td className="px-4 py-2">{category.men ? "Yes" : "No"}</td>
-                      <td className="px-4 py-2">{category.women ? "Yes" : "No"}</td>
-                      <td className="px-4 py-2">{category.kid ? "Yes" : "No"}</td>
+                      <td className="px-4 py-2">
+                        {category.men ? "Yes" : "No"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {category.women ? "Yes" : "No"}
+                      </td>
+                      <td className="px-4 py-2">
+                        {category.kid ? "Yes" : "No"}
+                      </td>
                       <td className="px-4 py-2">
                         <button
                           onClick={() => handleCopyCategoryId(category._id)}
